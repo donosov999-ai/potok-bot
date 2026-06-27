@@ -14,6 +14,7 @@ const CONTACT = cfg.contact_username; // личный ТГ для заявок
 const EXAMPLES = cfg.examples_tg; // ТГ-группа с примерами AI-генераций
 const IG = cfg.instagram; // Instagram
 const MINIAPP = cfg.miniapp_url; // Telegram Mini App — витрина продуктов
+const OWNER = cfg.owner_id; // chat_id владельца для лид-уведомлений
 
 async function tg(method, body) {
   const r = await fetch(`${API}/${method}`, {
@@ -33,25 +34,33 @@ const mainKeyboard = {
     [{ text: "🚀 Открыть витрину", web_app: { url: MINIAPP } }],
     [{ text: "🤖 AI для бизнеса — сайты · боты · CRM", callback_data: "asibots" }],
     [{ text: "🎨 AI-генерация картинок и видео", callback_data: "aigen" }],
-    [{ text: "🎮 PsyGames — тренируй мозг", url: P.psygames }],
-    [{ text: "⌨️ TypeRIGHTing — научись печатать", url: P.typerighting }],
+    // два коротких продукта в одну линию (раскрывают подменю с описанием)
+    [
+      { text: "🎮 PsyGames", callback_data: "psy" },
+      { text: "⌨️ TypeRIGHTing", callback_data: "type" },
+    ],
     [{ text: "💬 Написать Денису лично", url: `https://t.me/${CONTACT}` }],
   ],
 };
 
 const AIGEN_TEXT =
-  "🎨 <b>AI-генерация картинок и видео — пачкой, под ключ.</b>\n\n" +
-  "Не одна картинка, а сразу <b>набор в едином стиле</b> под твой проект: " +
-  "лента в соцсетях, карточки товаров, обложки, аватары, баннеры. " +
-  "Плюс короткие AI-видео.\n\n" +
-  "Делаю <b>батчами</b> — пачка за один заход, единый стиль, быстро и дешевле, чем по одной.\n\n" +
-  "👉 Примеры работ — в канале. Хочешь пачку под свой проект — пиши.";
+  "🎨 <b>AI-генерация картинок и видео — пачками под бизнес.</b>\n\n" +
+  "Не одна картинка для развлечения, а <b>серия в едином стиле под задачу</b>:\n" +
+  "• карточки товаров для маркетплейсов (Ozon, WB)\n" +
+  "• визуал и баннеры для сайта\n" +
+  "• обложки и контент для соцсетей\n" +
+  "• короткие AI-видео\n\n" +
+  "Работаю <b>батчами</b> — десятки единиц за заход, единый стиль, дешевле штучной отрисовки.\n\n" +
+  "👉 Примеры в канале. Нужна пачка под сайт или маркетплейс — пиши.";
 
 const aigenKeyboard = {
   inline_keyboard: [
-    [{ text: "📸 Примеры работ (ТГ)", url: EXAMPLES }],
-    [{ text: "📷 Instagram", url: IG }],
-    [{ text: "✍️ Заказать генерацию", url: `https://t.me/${CONTACT}` }],
+    // примеры в ТГ и Instagram — в один ряд
+    [
+      { text: "📸 Примеры (ТГ)", url: EXAMPLES },
+      { text: "📷 Instagram", url: IG },
+    ],
+    [{ text: "✍️ Заказать генерацию", callback_data: "order_aigen" }],
     [{ text: "⬅️ Назад", callback_data: "back" }],
   ],
 };
@@ -67,15 +76,24 @@ const ASIBOTS_TEXT =
 const asibotsKeyboard = {
   inline_keyboard: [
     [{ text: "🌐 Посмотреть Asibots", url: P.asibots }],
-    [{ text: "✍️ Написать Денису", url: `https://t.me/${CONTACT}` }],
+    [{ text: "✍️ Оставить заявку", callback_data: "order_asibots" }],
     [{ text: "⬅️ Назад", callback_data: "back" }],
   ],
 };
 
 const PSY_TEXT =
-  "🎮 <b>PsyGames</b> — 47 игр для тренировки мозга: память, внимание, реакция, логика.\n\nЖми 👇";
+  "🎮 <b>PsyGames — тренажёр мозга</b>\n\n" +
+  "🧠 47 игр на память, внимание, реакцию, логику и скорость мышления\n" +
+  "📈 Уровни, звёзды, прогресс — видно, как растёшь\n" +
+  "👨‍👩‍👧 Для детей и взрослых, по паре минут в день\n\n" +
+  "Качай когнитивку каждый день 👇";
 const TYPE_TEXT =
-  "⌨️ <b>TypeRIGHTing</b> — тренажёр слепой печати: 7 языков, курс, статистика.\n\nЖми 👇";
+  "⌨️ <b>TypeRIGHTing — слепая печать</b>\n\n" +
+  "🌍 7 языков + национальные раскладки\n" +
+  "🎓 Курс с нуля и тренажёр слабых клавиш\n" +
+  "📊 Статистика скорости и ошибок\n" +
+  "📚 Тексты из литературы, а не скучные строки\n\n" +
+  "Печатай быстро, не глядя на клавиши ⚡ 👇";
 
 const psygamesKeyboard = {
   inline_keyboard: [
@@ -116,6 +134,12 @@ async function handleUpdate(u) {
       await tg("sendMessage", { chat_id: chatId, text: WELCOME, parse_mode: "HTML", reply_markup: mainKeyboard });
       return;
     }
+    if (text.startsWith("/id")) {
+      const u2 = u.message.from || {};
+      await tg("sendMessage", { chat_id: chatId, parse_mode: "HTML",
+        text: `Твой chat_id: <code>${chatId}</code>\nusername: @${u2.username || "—"}\n\nСкажи это число Claude — пропишу тебя владельцем для лид-уведомлений.` });
+      return;
+    }
     const route = routeByKeywords(text);
     if (route) {
       await tg("sendMessage", { chat_id: chatId, text: route.text, parse_mode: "HTML", reply_markup: route.kb });
@@ -134,6 +158,27 @@ async function handleUpdate(u) {
       await tg("editMessageText", { chat_id: chatId, message_id: msgId, text: ASIBOTS_TEXT, parse_mode: "HTML", reply_markup: asibotsKeyboard });
     } else if (cq.data === "aigen") {
       await tg("editMessageText", { chat_id: chatId, message_id: msgId, text: AIGEN_TEXT, parse_mode: "HTML", reply_markup: aigenKeyboard });
+    } else if (cq.data === "psy") {
+      await tg("editMessageText", { chat_id: chatId, message_id: msgId, text: PSY_TEXT, parse_mode: "HTML", reply_markup: psygamesKeyboard });
+    } else if (cq.data === "type") {
+      await tg("editMessageText", { chat_id: chatId, message_id: msgId, text: TYPE_TEXT, parse_mode: "HTML", reply_markup: typeKeyboard });
+    } else if (cq.data.startsWith("order_")) {
+      const kinds = { order_aigen: "AI-генерация картинок и видео", order_asibots: "Сайт / бот / CRM (Asibots)" };
+      const kind = kinds[cq.data] || "услуга";
+      const f = cq.from || {};
+      const who = f.username ? "@" + f.username : (f.first_name || "аноним");
+      // уведомление владельцу в личку
+      if (OWNER) {
+        await tg("sendMessage", { chat_id: OWNER, parse_mode: "HTML",
+          text: `🔔 <b>Новый лид!</b>\n\nИнтерес: <b>${kind}</b>\nОт: ${who}\nid: <code>${f.id}</code>\n\n<a href="tg://user?id=${f.id}">Открыть чат с ним</a>` });
+      }
+      // ответ человеку
+      await tg("editMessageText", { chat_id: chatId, message_id: msgId, parse_mode: "HTML",
+        text: `✅ Заявка на «${kind}» принята! Денис скоро свяжется.\nИли напиши сам 👇`,
+        reply_markup: { inline_keyboard: [
+          [{ text: "💬 Написать Денису", url: `https://t.me/${CONTACT}` }],
+          [{ text: "⬅️ Меню", callback_data: "back" }],
+        ] } });
     } else if (cq.data === "back") {
       await tg("editMessageText", { chat_id: chatId, message_id: msgId, text: WELCOME, parse_mode: "HTML", reply_markup: mainKeyboard });
     }
