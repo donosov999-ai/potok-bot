@@ -1,0 +1,12 @@
+{
+  "token": "ВСТАВЬ_ТОКЕН_ОТ_BOTFATHER",
+  "contact_username": "your_telegram_username",
+  "miniapp_url": "https://your-username.github.io/your-miniapp/",
+  "examples_tg": "https://t.me/your_channel",
+  "instagram": "https://instagram.com/your_account",
+  "products": {
+    "psygames": "https://example.com",
+    "typerighting": "https://example.com",
+    "asibots": "https://example.com"
+  }
+}
